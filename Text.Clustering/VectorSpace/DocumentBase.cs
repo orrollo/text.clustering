@@ -12,6 +12,11 @@ namespace Text.Clustering.VectorSpace
         protected HashSet<String> Terms = null;
         public int ProcessedTextHash { get; set; }
 
+        protected DocumentBase()
+        {
+            
+        }
+
         protected DocumentBase(string source)
         {
             PreProcessText(source);

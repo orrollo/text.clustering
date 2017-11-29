@@ -46,8 +46,18 @@ namespace Text.Clustering.VectorSpace
             return magnitudes[document];
         }
 
+        protected Dictionary<DocumentBase,Dictionary<DocumentBase,double>> cache = new Dictionary<DocumentBase, Dictionary<DocumentBase, double>>();
+
+        public Dictionary<string, double> GetWeights(DocumentBase document)
+        {
+            return _tfIdfWeights.ContainsKey(document) ? _tfIdfWeights[document] : null;
+        }
+
         private double GetDotProduct(DocumentBase d1, DocumentBase d2)
         {
+            if (cache.ContainsKey(d1) && cache[d1].ContainsKey(d2)) return cache[d1][d2];
+            if (cache.ContainsKey(d2) && cache[d2].ContainsKey(d1)) return cache[d2][d1];
+
             var weights1 = _tfIdfWeights[d1];
             var weights2 = _tfIdfWeights[d2];
             double sum = 0;
@@ -57,6 +67,10 @@ namespace Text.Clustering.VectorSpace
                 var w2 = weights2[term];
                 sum += w1*w2;
             }
+
+            if (!cache.ContainsKey(d1)) cache[d1] = new Dictionary<DocumentBase, double>();
+            if (!cache[d1].ContainsKey(d2)) cache[d1][d2] = sum;
+
             return sum;
         }
 
