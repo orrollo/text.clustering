@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Hashing\LocalitySensitiveHashing.cs" />
     <Compile Include="Hashing\MinHashing.cs" />
+    <Compile Include="LatentSemantic\ProbLatentSemanticAnalyse.cs" />
     <Compile Include="TextUtils\CharExtractor.cs" />
     <Compile Include="Interface\ITextPartExtractor.cs" />
     <Compile Include="TextUtils\NgramExtractor.cs" />

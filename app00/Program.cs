@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using NHunspell;
 using Text.Clustering.Hashing;
 using Text.Clustering.Interface;
+using Text.Clustering.LatentSemantic;
 using Text.Clustering.TextUtils;
 using Text.Clustering.VectorSpace;
 
@@ -134,6 +136,26 @@ namespace app00
                 }
             }
 
+            Dictionary<string,int> keyz = new Dictionary<string, int>();
+            Dictionary<int, Dictionary<int, int>> data = new Dictionary<int, Dictionary<int, int>>();
+            for (int d = 0; d < list.Count; d++)
+            {
+                var document = list[d];
+                var kws = doc2book[document].KeyWords;
+                if (kws == null || kws.Count == 0) continue;
+                data[d] = new Dictionary<int, int>();
+                foreach (var kw in kws)
+                {
+                    if (!keyz.ContainsKey(kw)) keyz[kw] = keyz.Count;
+                    var ki = keyz[kw];
+                    if (!data[d].ContainsKey(ki)) data[d][ki] = 0;
+                    data[d][ki] = data[d][ki] + 1;
+                }
+            }
+
+            var pl = new ProbLatentSemanticAnalyse(30, data);
+            pl.Train(100);
+
             ////var d = model.CosineSimilarity(list[0], list[1]);
             //var lsh = new LocalitySensitiveHashing(0.1, 0.5, 0.1, 0.8);
             //lsh.Hashing.Extractor = new NgramExtractor(3);
@@ -167,17 +189,17 @@ namespace app00
             ////    }
             ////}
 
-            var wordPairs = keys2book.Select(x => x).ToList();
-            wordPairs.Sort((a,b)=>b.Value.Count.CompareTo(a.Value.Count));
+            //var wordPairs = keys2book.Select(x => x).ToList();
+            //wordPairs.Sort((a,b)=>b.Value.Count.CompareTo(a.Value.Count));
 
-            using (var wrt = new StreamWriter("keys.lst"))
-            {
-                foreach (var wp in wordPairs) wrt.WriteLine("{0} => {1}", wp.Key, wp.Value.Count);
-                wrt.Flush();
-            }
+            //using (var wrt = new StreamWriter("keys.lst"))
+            //{
+            //    foreach (var wp in wordPairs) wrt.WriteLine("{0} => {1}", wp.Key, wp.Value.Count);
+            //    wrt.Flush();
+            //}
 
             
-            //Console.ReadLine();
+            Console.ReadLine();
         }
     }
 }
