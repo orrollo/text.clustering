@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Text.Clustering.LatentSemantic
 {
     public class ProbLatentSemanticAnalyse
     {
+        ParallelOptions _options = new ParallelOptions() { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
         protected Dictionary<int, Dictionary<int, int>> counts;
 
         private readonly Dictionary<int,int> _docNumbers = new Dictionary<int, int>();
@@ -85,22 +88,36 @@ namespace Text.Clustering.LatentSemantic
 
         private void NormQu()
         {
-            for (int d = 0; d < _docCount; d++)
+            Parallel.For(0, _docCount, _options, d =>
             {
                 double sum = 0.0;
                 for (int t = 0; t < _themeCount; t++) sum += _quDt[d, t];
                 for (int t = 0; t < _themeCount; t++) _quDt[d, t] = _quDt[d, t] / sum;
-            }
+            });
+
+            //for (int d = 0; d < _docCount; d++)
+            //{
+            //    double sum = 0.0;
+            //    for (int t = 0; t < _themeCount; t++) sum += _quDt[d, t];
+            //    for (int t = 0; t < _themeCount; t++) _quDt[d, t] = _quDt[d, t] / sum;
+            //}
         }
 
         private void NormPhi()
         {
-            for (int w = 0; w < _wordCount; w++)
+            Parallel.For(0, _wordCount, _options, w =>
             {
                 double sum = 0.0;
                 for (int t = 0; t < _themeCount; t++) sum += _phiWt[w, t];
-                for (int t = 0; t < _themeCount; t++) _phiWt[w, t] = _phiWt[w, t]/sum;
-            }
+                for (int t = 0; t < _themeCount; t++) _phiWt[w, t] = _phiWt[w, t] / sum;
+            });
+
+            //for (int w = 0; w < _wordCount; w++)
+            //{
+            //    double sum = 0.0;
+            //    for (int t = 0; t < _themeCount; t++) sum += _phiWt[w, t];
+            //    for (int t = 0; t < _themeCount; t++) _phiWt[w, t] = _phiWt[w, t]/sum;
+            //}
         }
 
         public void Train(int maxSteps = 100, Action<int> stepDelegate = null)
@@ -118,8 +135,10 @@ namespace Text.Clustering.LatentSemantic
                 // 
                 for (int d = 0; d < _docCount; d++)
                 {
-                    for (int w = 0; w < _wordCount; w++)
+                    Parallel.For(0, _wordCount, _options, w =>
                     {
+                    //for (int w = 0; w < _wordCount; w++)
+                    //{
                         var ndw = getNdw(d, w);
                         double z = 0;
                         for (int t = 0; t < _themeCount; t++) z += _phiWt[w, t] * _quDt[d, t];
@@ -132,14 +151,18 @@ namespace Text.Clustering.LatentSemantic
                             _nDt[d, t] += chg;
                             _nt[t] += chg;
                         }
-                    }
+                    //}
+                    });
                 }
                 //
-                for (int t = 0; t < _themeCount; t++)
+                Parallel.For(0, _themeCount, _options, t =>
                 {
+                    //for (int t = 0; t < _themeCount; t++)
+                    //{
                     for (int d = 0; d < _docCount; d++) _quDt[d, t] = _nDt[d, t]/_nd[d];
                     for (int w = 0; w < _wordCount; w++) _phiWt[w, t] = _nWt[w, t]/_nt[t];
-                }
+                    //}
+                });
                 if (step >= 3) MakeSmallsAreZeros(1e-8);
                 //
                 NormPhi();
@@ -159,11 +182,14 @@ namespace Text.Clustering.LatentSemantic
 
         private void MakeSmallsAreZeros(double eps)
         {
-            for (int t = 0; t < _themeCount; t++)
+            Parallel.For(0, _themeCount, _options, t =>
             {
+                //for (int t = 0; t < _themeCount; t++)
+                //{
                 for (int w = 0; w < _wordCount; w++) if (_phiWt[w, t] < eps) _phiWt[w, t] = 0.0;
                 for (int d = 0; d < _docCount; d++) if (_quDt[d, t] < eps) _quDt[d, t] = 0.0;
-            }
+                //}
+            });
         }
 
         private double CalcLikehood()

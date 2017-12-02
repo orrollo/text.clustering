@@ -139,8 +139,8 @@ namespace app00
             var srcBooks = list.Select((d, i) => doc2book[d]).Where(b => b.KeyWords != null && b.KeyWords.Count > 0).ToList();
             var srcTexts = srcBooks.Select(x => x.KeyWords).ToList();
 
-            var pl = new ProbLatentSemanticAnalyse(50, srcTexts);
-            pl.Train(10, x => Console.WriteLine("{1}: step {0} finished...", x, DateTime.Now.ToString("T")));
+            var pl = new ProbLatentSemanticAnalyse(10, srcTexts);
+            pl.Train(20, x => Console.WriteLine("{1}: step {0} finished...", x, DateTime.Now.ToString("T")));
 
             // 
 
@@ -148,18 +148,27 @@ namespace app00
             var qu = pl.QuDt;
             var wrd = pl.WordIndexes;
 
+            List<KeyValuePair<string,double>> keyz = new List<KeyValuePair<string, double>>();
+
             using (var wrt = new StreamWriter("theme_word.lst"))
             {
                 for (int t = 0; t < pl.ThemeCount; t++)
                 {
+                    keyz.Clear();
+
                     wrt.WriteLine("-----------------------------------------------------------------");
                     wrt.WriteLine("theme index: {0}", t);
                     wrt.WriteLine("words collected");
+
                     foreach (var pair in wrd)
                     {
                         var val = phi[pair.Value, t];
-                        if (val >= 0.01) wrt.WriteLine("[{0}] => {1}", pair.Key, val);
+                        if (val >= 0.01) keyz.Add(new KeyValuePair<string, double>(pair.Key, val));
+                        //if (val >= 0.01) wrt.WriteLine("[{0}] => {1}", pair.Key, val);
                     }
+
+                    keyz.Sort((a, b) => b.Value.CompareTo(a.Value));
+                    foreach (var pair in keyz) wrt.WriteLine("[{0}] => {1}", pair.Key, pair.Value);
                 }
                 wrt.Flush();
             }
