@@ -83,7 +83,7 @@ namespace app00
 
             foreach (var file in files)
             {
-                Console.WriteLine("processing: {0}...", Path.GetFileName(file));
+                Console.WriteLine("{1}: processing: {0}...", Path.GetFileName(file), DateTime.Now.ToString("T"));
                 using (var rdr = new StreamReader(file, enc))
                 {
                     while (!rdr.EndOfStream)
@@ -136,25 +136,53 @@ namespace app00
                 }
             }
 
-            Dictionary<string,int> keyz = new Dictionary<string, int>();
-            Dictionary<int, Dictionary<int, int>> data = new Dictionary<int, Dictionary<int, int>>();
-            for (int d = 0; d < list.Count; d++)
+            var srcBooks = list.Select((d, i) => doc2book[d]).Where(b => b.KeyWords != null && b.KeyWords.Count > 0).ToList();
+            var srcTexts = srcBooks.Select(x => x.KeyWords).ToList();
+
+            var pl = new ProbLatentSemanticAnalyse(50, srcTexts);
+            pl.Train(10, x => Console.WriteLine("{1}: step {0} finished...", x, DateTime.Now.ToString("T")));
+
+            // 
+
+            var phi = pl.PhiWt;
+            var qu = pl.QuDt;
+            var wrd = pl.WordIndexes;
+
+            using (var wrt = new StreamWriter("theme_word.lst"))
             {
-                var document = list[d];
-                var kws = doc2book[document].KeyWords;
-                if (kws == null || kws.Count == 0) continue;
-                data[d] = new Dictionary<int, int>();
-                foreach (var kw in kws)
+                for (int t = 0; t < pl.ThemeCount; t++)
                 {
-                    if (!keyz.ContainsKey(kw)) keyz[kw] = keyz.Count;
-                    var ki = keyz[kw];
-                    if (!data[d].ContainsKey(ki)) data[d][ki] = 0;
-                    data[d][ki] = data[d][ki] + 1;
+                    wrt.WriteLine("-----------------------------------------------------------------");
+                    wrt.WriteLine("theme index: {0}", t);
+                    wrt.WriteLine("words collected");
+                    foreach (var pair in wrd)
+                    {
+                        var val = phi[pair.Value, t];
+                        if (val >= 0.01) wrt.WriteLine("[{0}] => {1}", pair.Key, val);
+                    }
                 }
+                wrt.Flush();
             }
 
-            var pl = new ProbLatentSemanticAnalyse(30, data);
-            pl.Train(100);
+            //Dictionary<string,int> keyz = new Dictionary<string, int>();
+            //Dictionary<int, Dictionary<int, int>> data = new Dictionary<int, Dictionary<int, int>>();
+            //for (int d = 0; d < list.Count; d++)
+            //{
+            //    var document = list[d];
+            //    var kws = doc2book[document].KeyWords;
+            //    if (kws == null || kws.Count == 0) continue;
+            //    data[d] = new Dictionary<int, int>();
+            //    foreach (var kw in kws)
+            //    {
+            //        if (!keyz.ContainsKey(kw)) keyz[kw] = keyz.Count;
+            //        var ki = keyz[kw];
+            //        if (!data[d].ContainsKey(ki)) data[d][ki] = 0;
+            //        data[d][ki] = data[d][ki] + 1;
+            //    }
+            //}
+
+            //var pl = new ProbLatentSemanticAnalyse(30, data);
+            //pl.Train(100);
 
             ////var d = model.CosineSimilarity(list[0], list[1]);
             //var lsh = new LocalitySensitiveHashing(0.1, 0.5, 0.1, 0.8);

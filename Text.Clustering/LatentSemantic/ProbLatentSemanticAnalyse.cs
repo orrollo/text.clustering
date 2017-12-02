@@ -12,32 +12,65 @@ namespace Text.Clustering.LatentSemantic
         private readonly Dictionary<int,int> _docNumbers = new Dictionary<int, int>();
         private readonly Dictionary<int, int> _wordNumbers = new Dictionary<int, int>();
 
-        private readonly int _docCount;
-        private readonly int _wordCount;
-        private readonly int _themeCount;
+        private int _docCount;
+        private int _wordCount;
+        private int _themeCount;
 
-        private readonly int[] _nd;
-        private readonly double[,] _phiWt;
-        private readonly double[,] _quDt;
-        private readonly double[,] _nWt;
-        private readonly double[,] _nDt;
-        private readonly double[] _nt;
+        public int ThemeCount {get { return _themeCount; } }
+
+        private int[] _nd;
+        private double[,] _phiWt;
+        private double[,] _quDt;
+        private double[,] _nWt;
+        private double[,] _nDt;
+        private double[] _nt;
+
+        private Dictionary<string, int> _wordIndexes = null;
+
+        public Dictionary<string, int> WordIndexes { get { return _wordIndexes; } }
+
+        public ProbLatentSemanticAnalyse(int themeNumber, IEnumerable<IEnumerable<string>> texts)
+        {
+            _wordIndexes = new Dictionary<string, int>();
+            int docIndex = 0;
+            var data = new Dictionary<int,Dictionary<int,int>>();
+            foreach (var text in texts)
+            {
+                data[docIndex] = new Dictionary<int, int>();
+                foreach (var word in text)
+                {
+                    if (!_wordIndexes.ContainsKey(word)) _wordIndexes[word] = _wordIndexes.Count;
+                    var wordIndex = _wordIndexes[word];
+                    if (!data[docIndex].ContainsKey(wordIndex)) 
+                        data[docIndex][wordIndex] = 1;
+                    else
+                        data[docIndex][wordIndex] = data[docIndex][wordIndex] + 1;
+                }
+                docIndex++;
+            }
+            PreprocessInput(themeNumber, data);
+        }
 
         public ProbLatentSemanticAnalyse(int themeNumber, Dictionary<int, Dictionary<int, int>> data)
         {
-            _themeCount = themeNumber;
+            PreprocessInput(themeNumber, data);
+        }
+
+        private void PreprocessInput(int themeNumber, Dictionary<int, Dictionary<int, int>> data)
+        {
             TransformData(data);
             //
+            _themeCount = themeNumber;
             _docCount = _docNumbers.Count;
             _wordCount = _wordNumbers.Count;
             //
             _nd = new int[_docCount];
-            for (int d=0;d<_docCount;d++) foreach (var count in counts[d].Values) _nd[d] += count;
+            for (int d = 0; d < _docCount; d++) foreach (var count in counts[d].Values) _nd[d] += count;
             //
             _nt = new double[_themeCount];
             _phiWt = new double[_wordCount, _themeCount];
             _quDt = new double[_docCount, _themeCount];
-            _nWt = new double[_wordCount,_themeCount];
+            _nWt = new double[_wordCount, _themeCount];
             _nDt = new double[_docCount, _themeCount];
             //
             var rnd = new Random();
@@ -70,7 +103,7 @@ namespace Text.Clustering.LatentSemantic
             }
         }
 
-        public void Train(int maxSteps = 100)
+        public void Train(int maxSteps = 100, Action<int> stepDelegate = null)
         {
             double r = 0.2;
             double prev_l = 0.0;
@@ -113,6 +146,7 @@ namespace Text.Clustering.LatentSemantic
                 NormQu();
                 //
                 var l = CalcLikehood();
+                if (stepDelegate != null) stepDelegate(step);
                 if (Math.Abs(l - prev_l) < 1e-5) break;
                 prev_l = l;
             }
